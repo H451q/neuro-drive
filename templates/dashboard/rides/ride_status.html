@@ -1,0 +1,228 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+
+{% block dashboard_title %}{% trans "Ride Details" %}{% endblock dashboard_title %}
+
+{% block dashboard_content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto bg-white shadow-md rounded-lg overflow-hidden">
+        <!-- Ride Header -->
+        <div class="p-6 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-2xl font-bold text-gray-800">
+                {% trans "Ride #" %}{{ ride.id }}
+            </h2>
+            <span class="px-3 py-1 text-xs font-semibold rounded-full
+                {% if ride.status == 'requested' %}bg-yellow-100 text-yellow-800
+                {% elif ride.status == 'assigned' %}bg-blue-100 text-blue-800
+                {% elif ride.status == 'in_progress' %}bg-green-100 text-green-800
+                {% elif ride.status == 'completed' %}bg-green-100 text-green-800
+                {% elif ride.status == 'cancelled' %}bg-red-100 text-red-800
+                {% endif %}">
+                {{ ride.get_status_display }}
+            </span>
+        </div>
+
+        <!-- Ride Details -->
+        <div class="p-6 space-y-6">
+            <!-- Pickup and Dropoff Locations -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">
+                        {% trans "Pickup Location" %}
+                    </h3>
+                    <p class="text-gray-900 font-semibold">
+                        {{ ride.pickup_location }}
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">
+                        {% trans "Dropoff Location" %}
+                    </h3>
+                    <p class="text-gray-900 font-semibold">
+                        {{ ride.dropoff_location }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Ride Duration (Visible if ride is completed) -->
+            {% if ride.status == 'completed' and ride_duration %}
+            <div class="mt-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">
+                    {% trans "Ride Duration" %}
+                </h3>
+                <p class="text-gray-900 font-semibold">
+                    {{ ride_duration }}
+                </p>
+            </div>
+            {% endif %}
+
+            <!-- Secret Code (Visible only to the passenger) -->
+            {% if ride.passenger == request.user and not ride.status == 'completed' %}
+            <div class="mt-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">
+                    {% trans "Ride Code" %}
+                </h3>
+                <p class="text-gray-900 text-2xl font-semibold">
+                    {{ ride.code }}
+                </p>
+            </div>
+            {% endif %}
+
+            <!-- Driver Details (Visible only to the passenger) -->
+            {% if ride.driver and ride.passenger == request.user %}
+            <div class="mt-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">
+                    {% trans "Driver Details" %}
+                </h3>
+                <div class="bg-gray-50 p-4 rounded-xl">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 h-12 w-12 rounded-full bg-gray-300"></div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-900">{{ ride.driver.full_name }}</p>
+                            <p class="text-sm text-gray-500">{% trans "ID" %}: #{{ ride.driver.id }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Passenger Details (for Drivers) -->
+            {% if request.user.is_driver and ride.passenger %}
+            <div class="mt-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">
+                    {% trans "Passenger Details" %}
+                </h3>
+                <div class="bg-gray-50 p-4 rounded-xl">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 h-12 w-12 rounded-full bg-gray-300"></div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-900">{{ ride.passenger.first_name }} {{ ride.passenger.last_name }}</p>
+                            <p class="text-sm font-medium text-gray-900">{{ ride.passenger.email }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Special Requirements -->
+            {% if ride.special_requirements %}
+            <div class="mt-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">
+                    {% trans "Special Requirements" %}
+                </h3>
+                <p class="text-gray-900">
+                    {{ ride.special_requirements }}
+                </p>
+            </div>
+            {% endif %}
+
+            <!-- Alert Summary (Visible if ride is in_progress or completed) -->
+            {% if ride.status == 'in_progress' or ride.status == 'completed' %}
+            <div class="mt-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">
+                    {% trans "Drowsiness Alerts Summary" %}
+                </h3>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="text-center">
+                            <p class="text-lg font-bold text-red-700" id="high-alerts-count">{{ high_alerts }}</p>
+                            <p class="text-sm text-gray-500">High Alerts</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-lg font-bold text-yellow-700" id="medium-alerts-count">{{ medium_alerts }}</p>
+                            <p class="text-sm text-gray-500">Medium Alerts</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-lg font-bold text-blue-700" id="low-alerts-count">{{ low_alerts }}</p>
+                            <p class="text-sm text-gray-500">Low Alerts</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Review Section -->
+            {% if review %}
+            <div class="mt-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-2">
+                    {% trans "Review by user" %}
+                </h3>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <div class="space-y-4">
+                        <!-- Driver Rating with Stars -->
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700">{% trans "Rating" %}</h4>
+                            <div class="flex items-center mt-1">
+                                <div class="flex">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= review.driver_rating %}
+                                        <svg class="w-8 h-8 text-primary" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z"/>
+                                        </svg>
+                                        {% else %}
+                                        <svg class="w-8 h-8 text-gray-300" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z"/>
+                                        </svg>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <span class="ml-2 text-md text-gray-600">{{ review.driver_rating }} out of 5</span>
+                            </div>
+                        </div>
+
+                        <!-- Passenger Comment -->
+                        {% if review.passenger_comment %}
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700">{% trans "Comment" %}</h4>
+                            <p class="text-gray-900 mt-1 text-sm">
+                                {{ review.passenger_comment }}
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="mt-6 flex justify-between">
+                <a href="{% url 'my_rides' %}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-xl">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                    <span class="ml-3">{% trans "Go Back" %}</span>
+                </a>
+                
+                <!-- Cancel Ride Button (for Passengers) -->
+                {% if ride.status in 'requested,assigned' and not request.user.is_driver %}
+                <a href="{% url 'cancel_ride' ride.id %}" class="flex items-center px-4 py-3 bg-red-100 text-red-700 hover:bg-red-100 hover:text-red-700 rounded-xl">
+                    <i data-lucide="ban" class="w-5 h-5"></i>
+                    <span class="ml-3">{% trans "Cancel Ride" %}</span>
+                </a>
+                {% endif %}
+                
+                <!-- Start Ride Button (for Drivers) -->
+                {% if ride.status == 'assigned' and request.user.is_driver %}
+                <a href="{% url 'start_ride' ride.id %}" class="flex items-center px-4 py-3 text-blue-700 bg-blue-100 hover:bg-blue-200 hover:text-blue-700 rounded-xl">
+                    <i data-lucide="arrow-big-right-dash" class="w-5 h-5"></i>
+                    {% trans "Start Ride" %}
+                </a>
+                {% endif %}
+                
+                <!-- Complete Ride Button (for Drivers) -->
+                {% if ride.status == 'in_progress' and request.user.is_driver %}
+                <a href="{% url 'complete_ride' ride.id %}" class="flex items-center px-4 py-3 text-blue-700 bg-blue-100 hover:bg-blue-200 hover:text-blue-700 rounded-xl">
+                    <i data-lucide="arrow-big-right-dash" class="w-5 h-5"></i>
+                    {% trans "Complete Ride" %}
+                </a>
+                {% endif %}
+
+                <!-- Submit Review Button (for Passengers) -->
+                {% if ride.status == 'completed' and ride.passenger == request.user and not review %}
+                <a href="{% url 'submit_review' ride.id %}" class="flex items-center px-4 py-3 text-blue-700 bg-blue-100 hover:bg-blue-200 hover:text-blue-700 rounded-xl">
+                    <i data-lucide="star" class="w-5 h-5"></i>
+                    <span class="ml-3">{% trans "Rate Ride" %}</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock dashboard_content %}

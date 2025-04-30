@@ -1,0 +1,32 @@
+<!-- complete_ride.html -->
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+
+{% block dashboard_title %}{% trans "Complete Ride" %}{% endblock dashboard_title %}
+
+{% block dashboard_content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto bg-white shadow-md rounded-lg overflow-hidden">
+        <div class="p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">{% trans "Complete Ride" %}</h2>
+            
+            <p class="mb-4">{% trans "Are you sure you want to mark this ride as completed?" %}</p>
+            
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <div class="flex justify-end space-x-4">
+                    <a href="{% url 'ride_status' ride.id %}" class="flex items-center gap-2 px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-700 rounded-xl">
+                        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        {% trans "No, Go Back" %}
+                    </a>
+                    <button type="submit" class="flex items-center gap-2 px-4 py-3 text-blue-700 bg-blue-100 hover:bg-blue-200 hover:text-blue-700 rounded-xl">
+                        {% trans "Yes, Complete Ride" %}
+                        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock dashboard_content %}
